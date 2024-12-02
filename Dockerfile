@@ -22,6 +22,10 @@ RUN apt update && \
     build-essential && \
     npm -g install npm@latest
 
+# Set correct permissions for npm cache
+RUN mkdir -p /home/container/.npm && \
+    chown -R 1001:1001 /home/container/.npm
+
 # Switch to non-root user and set work directory
 USER container
 ENV USER=container HOME=/home/container
