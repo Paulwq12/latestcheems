@@ -2,7 +2,8 @@ FROM ghcr.io/parkervcp/yolks:nodejs_20
 
 LABEL author="Michael Parker" maintainer="parker@pterodactyl.io"
 
-# Install additional dependencies
+# Install additional dependencies as root
+USER root
 RUN apt update && \
     apt -y install \
     ffmpeg \
@@ -21,7 +22,7 @@ RUN apt update && \
     build-essential && \
     npm -g install npm@latest
 
-# Set work directory and switch to non-root user
+# Switch to non-root user and set work directory
 USER container
 ENV USER=container HOME=/home/container
 WORKDIR /home/container
