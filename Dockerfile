@@ -1,9 +1,12 @@
+# Use the Node.js image from Yolks
 FROM ghcr.io/parkervcp/yolks:nodejs_20
 
 LABEL author="Michael Parker" maintainer="parker@pterodactyl.io"
 
-# Install additional dependencies as root
+# Use root user
 USER root
+
+# Install necessary dependencies
 RUN apt update && \
     apt -y install \
     ffmpeg \
@@ -20,15 +23,9 @@ RUN apt update && \
     tar \
     curl \
     build-essential && \
-    npm -g install npm@latest
+    npm install -g npm@latest
 
-# Set correct permissions for npm cache
-RUN mkdir -p /home/container/.npm && \
-    chown -R 1001:1001 /home/container/.npm
-
-# Switch to non-root user and set work directory
-USER container
-ENV USER=container HOME=/home/container
+# Set working directory
 WORKDIR /home/container
 
 # Copy package.json and install Node.js dependencies
