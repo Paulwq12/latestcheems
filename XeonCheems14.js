@@ -7560,204 +7560,147 @@ case 'style': case 'styletext': {
 
   if (!text) return replygcxeon(`Example: ${prefix + command} how to dance`);
 
-  const yts = require("yt-search");
-  const ytdlCore = require("@distube/ytdl-core");
+  const ytsr = require('ytsr');
 
-  // Perform YouTube search
-  let search = await yts(text);
-  let results = search.all.slice(0, 10); // Limit results to 10
-  if (results.length === 0) return replygcxeon('No search results found for the given query.');
+  try {
+    // Perform YouTube search using ytsr
+    const filters = await ytsr.getFilters(text);
+    const videoFilter = filters.get('Type').get('Video');
+    const searchResults = await ytsr(videoFilter.url, { limit: 10 }); // Limit to top 10 results
 
-  // Generate carousel items with search results
-  let push = [];
-  for (let i = 0; i < results.length; i++) {
-    let video = results[i];
-let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.timestamp}\nUploaded: ${video.ago}\nLink: ${video.url}`;
+    const results = searchResults.items;
+    if (results.length === 0) return replygcxeon('No search results found for the given query.');
 
+    // Generate carousel items with search results
+    let push = [];
+    for (let i = 0; i < results.length; i++) {
+      let video = results[i];
 
-    const mediaMessage = await prepareWAMessageMedia({ image: { url: video.thumbnail } }, { upload: XeonBotInc.waUploadToServer });
+      let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.duration}\nUploaded: ${video.uploadedAt}\nLink: ${video.url}`;
+      let thumbnailUrl = video.bestThumbnail.url;
 
-    push.push({
-      body: proto.Message.InteractiveMessage.Body.fromObject({
-        text: cap
-      }),
-      footer: proto.Message.InteractiveMessage.Footer.fromObject({
-        text: botname
-      }),
-      header: proto.Message.InteractiveMessage.Header.create({
-        title: `Result ${i + 1}`,
-        hasMediaAttachment: true,
-        ...mediaMessage
-      }),
-      nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
-        buttons: [
-           {
-            "name": "quick_reply",
-            "buttonParamsJson": `{\"display_text\":\"Download Video With Subtitle\",\"id\":\"${prefix}ytsubtitle ${video.url}\"}`
-          },
-          {
-            "name": "quick_reply",
-            "buttonParamsJson": `{\"display_text\":\"Download Video Without Subtitle\",\"id\":\"${prefix}ytdownload ${video.url}\"}`
-          },
-          {
-            "name": "quick_reply",
-            "buttonParamsJson": `{\"display_text\":\"Download Audio\",\"id\":\"${prefix}ytaudio ${video.url}\"}`
-          }
-        ]
-      })
-    });
-  }
+      const mediaMessage = await prepareWAMessageMedia({ image: { url: thumbnailUrl } }, { upload: XeonBotInc.waUploadToServer });
 
-  // Create carousel message
-  const msg = generateWAMessageFromContent(m.chat, {
-    viewOnceMessage: {
-      message: {
-        messageContextInfo: {
-          deviceListMetadata: {},
-          deviceListMetadataVersion: 2
-        },
-        interactiveMessage: proto.Message.InteractiveMessage.fromObject({
-          body: proto.Message.InteractiveMessage.Body.create({
-            text: `YouTube Search Results for: ${text}\n> NB: Downloading with subtitles can be very slow and can take lots of time, and most videos don't have subtitles. Instead, go to youtube and check if video has subtile, copy the link and use .ytsubtitle your copied url. {e.g .ytsubtitle https://www.youtube.com/watch?v=utj5yU}`
-          }),
-          footer: proto.Message.InteractiveMessage.Footer.create({
-            text: botname
-          }),
-          header: proto.Message.InteractiveMessage.Header.create({
-            hasMediaAttachment: false
-          }),
-          carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({
-            cards: push
-          }),
-          contextInfo: {
-            mentionedJid: [m.sender],
-            forwardingScore: 999,
-            isForwarded: true,
-            forwardedNewsletterMessageInfo: {
-              newsletterJid: global.link,
-              newsletterName: ownername,
-              serverMessageId: 143
+      push.push({
+        body: proto.Message.InteractiveMessage.Body.fromObject({
+          text: cap
+        }),
+        footer: proto.Message.InteractiveMessage.Footer.fromObject({
+          text: botname
+        }),
+        header: proto.Message.InteractiveMessage.Header.create({
+          title: `Result ${i + 1}`,
+          hasMediaAttachment: true,
+          ...mediaMessage
+        }),
+        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.fromObject({
+          buttons: [
+            {
+              name: "quick_reply",
+              buttonParamsJson: `{"display_text":"Download Video With Subtitle","id":"${prefix}ytsubtitle ${video.url}"}`
+            },
+            {
+              name: "quick_reply",
+              buttonParamsJson: `{"display_text":"Download Video Without Subtitle","id":"${prefix}ytdownload ${video.url}"}`
+            },
+            {
+              name: "quick_reply",
+              buttonParamsJson: `{"display_text":"Download Audio","id":"${prefix}ytaudio ${video.url}"}`
             }
-          }
+          ]
         })
-      }
+      });
     }
-  }, { quoted: m });
 
-  await XeonBotInc.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
+    // Create carousel message
+    const msg = generateWAMessageFromContent(m.chat, {
+      viewOnceMessage: {
+        message: {
+          messageContextInfo: {
+            deviceListMetadata: {},
+            deviceListMetadataVersion: 2
+          },
+          interactiveMessage: proto.Message.InteractiveMessage.fromObject({
+            body: proto.Message.InteractiveMessage.Body.create({
+              text: `YouTube Search Results for: ${text}\n> NB: Downloading with subtitles can be very slow and can take lots of time, and most videos don't have subtitles. Instead, go to youtube and check if video has subtitles, copy the link and use .ytsubtitle your copied URL. {e.g .ytsubtitle https://www.youtube.com/watch?v=utj5yU}`
+            }),
+            footer: proto.Message.InteractiveMessage.Footer.create({
+              text: botname
+            }),
+            header: proto.Message.InteractiveMessage.Header.create({
+              hasMediaAttachment: false
+            }),
+            carouselMessage: proto.Message.InteractiveMessage.CarouselMessage.fromObject({
+              cards: push
+            }),
+            contextInfo: {
+              mentionedJid: [m.sender],
+              forwardingScore: 999,
+              isForwarded: true,
+              forwardedNewsletterMessageInfo: {
+                newsletterJid: global.link,
+                newsletterName: ownername,
+                serverMessageId: 143
+              }
+            }
+          })
+        }
+      }
+    }, { quoted: m });
+
+    await XeonBotInc.relayMessage(m.chat, msg.message, { messageId: msg.key.id });
+  } catch (error) {
+    replygcxeon('Failed to fetch YouTube search results.');
+  }
   break;
 }
-
-
-
-
-myFFmpeg.setFfmpegPath(ffmpegStatic);
-
-      case 'ytdownload': {
-    myFFmpeg.setFfmpegPath(ffmpegStatic);
+        break
+case 'ytdownload': {
+    const youtubedl = require('youtube-dl-exec');
+    const fs = require('fs');
 
     const url = text;
-    if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
+    if (!url || !url.startsWith('http')) return replygcxeon("Invalid YouTube URL. Please provide a valid link.");
 
     try {
-        const info = await ytDownloader.getInfo(url);
-        const videoTitle = info.videoDetails.title;
+        console.log("Starting video download with audio...");
 
-        // Set up separate streams for video and audio
-        const videoStream = ytDownloader(url, { quality: '135'}); // 480p video only
-        const audioStream = ytDownloader(url, { quality: '140'}); // audio only
+        // Temp path for the downloaded video
+        const tempVideoPath = './tmp/temp_video.mp4';
 
-        // Define temporary file paths in 'tmp/' directory
-        const videoFile = './tmp/temp_video.mp4';
-        const audioFile = './tmp/temp_audio.m4a';
-        const outputFile = './tmp/temp_output.mp4';
-
-        // Function to handle downloading completion of both video and audio
-        const downloadCompleted = new Promise((resolve, reject) => {
-            let videoDone = false;
-            let audioDone = false;
-
-            const checkCompletion = () => {
-                if (videoDone && audioDone) resolve();
-            };
-
-            // Video stream
-            const videoFileStream = videoStream.pipe(fileSys.createWriteStream(videoFile));
-            videoFileStream.on('finish', () => {
-                console.log("Video download complete.");
-                videoDone = true;
-                checkCompletion();
-            });
-            videoStream.on('error', (error) => {
-                console.error("Video Stream Error:", error);
-                reject(error);
-            });
-
-            // Audio stream
-            const audioFileStream = audioStream.pipe(fileSys.createWriteStream(audioFile));
-            audioFileStream.on('finish', () => {
-                console.log("Audio download complete.");
-                audioDone = true;
-                checkCompletion();
-            });
-            audioStream.on('error', (error) => {
-                console.error("Audio Stream Error:", error);
-                reject(error);
-            });
+        // Download the video with audio
+        await youtubedl(url, {
+            output: tempVideoPath, // Save video directly to file
+            format: 'best[height<=480][ext=mp4]', // Video with audio, limited to 480p MP4
         });
 
-        // Wait for both downloads to complete before starting FFmpeg
-        await downloadCompleted;
-
-        // Check that both files exist before starting FFmpeg
-        if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
-            console.error("Error: One or both of the temp files do not exist.");
-            replygcxeon("Failed to download video and audio. Please try again.");
+        // Check if the video file exists
+        if (!fs.existsSync(tempVideoPath)) {
+            console.error("Download failed: Video file not found.");
+            replygcxeon("Failed to download the video. Please try again.");
             return;
         }
 
-        console.log("Both video and audio files are ready. Starting FFmpeg merge...");
+        console.log("Video downloaded successfully. Sending video...");
 
-        myFFmpeg(videoFile)
-            .input(audioFile)
-            .output(outputFile)
-            .videoCodec('copy') // Copy video codec directly to avoid re-encoding
-            .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
-            .on('start', (commandLine) => {
-                console.log("FFmpeg command:", commandLine); // Debug command used
-            })
-            .on('end', async () => {
-                console.log("FFmpeg merge complete.");
+        // Send the video
+        const videoBuffer = fs.readFileSync(tempVideoPath);
+        await XeonBotInc.sendMessage(m.chat, {
+            video: videoBuffer,
+            mimeType: 'video/mp4',
+            caption: "Here is your video with audio.",
+        }, { quoted: m });
 
-                if (!fileSys.existsSync(outputFile)) {
-                    console.error("FFmpeg failed to create the output file.");
-                    replygcxeon("An error occurred while merging video and audio. Please try again.");
-                    return;
-                }
-
-                const videoBuffer = fileSys.readFileSync(outputFile);
-                await XeonBotInc.sendMessage(m.chat, {
-                    video: videoBuffer,
-                    mimeType: 'video/mp4',
-                    caption: `Here is your video: ${videoTitle}`,
-                }, { quoted: m });
-
-                fileSys.unlinkSync(videoFile);
-                fileSys.unlinkSync(audioFile);
-                fileSys.unlinkSync(outputFile);
-                console.log("Temporary files cleaned up.");
-            })
-            .on('error', (error) => {
-                console.error("FFmpeg Error:", error);
-                replygcxeon("An error occurred while merging video and audio. Please try again.");
-            })
-            .run();
+        // Clean up temporary file
+        fs.unlinkSync(tempVideoPath);
+        console.log("Temporary file deleted.");
     } catch (error) {
-        console.error("Error downloading video:", error);
-        replygcxeon("An error occurred while downloading the video. Please try again.");
+        console.error("Error downloading video:", error.message);
+        replygcxeon("An unexpected error occurred while downloading the video. Please try again.");
     }
     break;
 }
+
 
 
 break
